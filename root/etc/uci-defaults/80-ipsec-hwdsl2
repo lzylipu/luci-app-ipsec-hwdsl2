@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# UCI defaults for luci-app-ipsec-hwdsl2
+# Creates /etc/config/ipsec-hwdsl2 with default Docker container parameters.
+
+[ -f /etc/config/ipsec-hwdsl2 ] && exit 0
+
+touch /etc/config/ipsec-hwdsl2
+
+uci -q batch <<EOF
+set ipsec-hwdsl2.@global[0]='global'
+set ipsec-hwdsl2.@global[0].container_name='ipsec-vpn-server'
+set ipsec-hwdsl2.@global[0].image='hwdsl2/ipsec-vpn-server:latest'
+set ipsec-hwdsl2.@global[0].volume='ikev2-vpn-data:/etc/ipsec.d'
+set ipsec-hwdsl2.@global[0].auto_setup='1'
+commit ipsec-hwdsl2
+EOF
+
+exit 0

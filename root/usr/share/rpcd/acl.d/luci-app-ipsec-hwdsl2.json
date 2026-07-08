@@ -1,0 +1,29 @@
+{
+	"luci-app-ipsec-hwdsl2": {
+		"description": "Grant ubus access for LuCI IPsec VPN (hwdsl2) management",
+		"read": {
+			"ubus": {
+				"luci.ipsec_hwdsl2": [
+					"container.status",
+					"clients.list",
+					"users.list",
+					"client.download"
+				]
+			},
+			"uci": [ "ipsec-hwdsl2" ]
+		},
+		"write": {
+			"ubus": {
+				"luci.ipsec_hwdsl2": [
+					"client.add",
+					"client.revoke",
+					"client.delete",
+					"user.add",
+					"user.delete",
+					"container.restart"
+				]
+			},
+			"uci": [ "ipsec-hwdsl2" ]
+		}
+	}
+}

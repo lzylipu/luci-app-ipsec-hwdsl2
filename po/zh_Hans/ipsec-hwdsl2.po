@@ -1,0 +1,51 @@
+
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "IPsec VPN (hwdsl2)"
+msgstr "IPsec VPN (hwdsl2)"
+
+msgid "Overview"
+msgstr "概览"
+
+msgid "IKEv2 Clients"
+msgstr "IKEv2 客户端"
+
+msgid "L2TP / XAuth Users"
+msgstr "L2TP / XAuth 用户"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Container running"
+msgstr "容器运行中"
+
+msgid "Container not running"
+msgstr "容器未运行"
+
+msgid "Active SA (live tunnels)"
+msgstr "活动 SA（在线隧道）"
+
+msgid "No active VPN connections"
+msgstr "当前无在线 VPN 连接"
+
+msgid "IKEv2 Client Certificates"
+msgstr "IKEv2 客户端证书"
+
+msgid "Add IKEv2 client"
+msgstr "添加 IKEv2 客户端"
+
+msgid "Revoke"
+msgstr "吊销"
+
+msgid "Delete"
+msgstr "删除"
+
+msgid "Add VPN user"
+msgstr "添加 VPN 用户"
+
+msgid "Restart container"
+msgstr "重启容器"
+
+msgid "Container restarted"
+msgstr "容器已重启"

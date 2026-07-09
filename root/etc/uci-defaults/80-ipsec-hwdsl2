@@ -8,7 +8,7 @@
 touch /etc/config/ipsec-hwdsl2
 
 uci -q batch <<EOF
-set ipsec-hwdsl2.@global[0]='global'
+add ipsec-hwdsl2 global
 set ipsec-hwdsl2.@global[0].container_name='ipsec-vpn-server'
 set ipsec-hwdsl2.@global[0].image='hwdsl2/ipsec-vpn-server:latest'
 set ipsec-hwdsl2.@global[0].volume='ikev2-vpn-data:/etc/ipsec.d'

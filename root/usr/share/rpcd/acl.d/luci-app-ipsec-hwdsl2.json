@@ -4,10 +4,10 @@
 		"read": {
 			"ubus": {
 				"luci.ipsec_hwdsl2": [
-					"container.status",
-					"clients.list",
-					"users.list",
-					"client.download"
+					"container_status",
+					"clients_list",
+					"users_list",
+					"client_download"
 				]
 			},
 			"uci": [ "ipsec-hwdsl2" ]
@@ -15,12 +15,12 @@
 		"write": {
 			"ubus": {
 				"luci.ipsec_hwdsl2": [
-					"client.add",
-					"client.revoke",
-					"client.delete",
-					"user.add",
-					"user.delete",
-					"container.restart"
+					"client_add",
+					"client_revoke",
+					"client_delete",
+					"user_add",
+					"user_delete",
+					"container_restart"
 				]
 			},
 			"uci": [ "ipsec-hwdsl2" ]

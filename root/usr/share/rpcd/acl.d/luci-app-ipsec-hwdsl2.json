@@ -5,6 +5,7 @@
 			"ubus": {
 				"luci.ipsec_hwdsl2": [
 					"container_status",
+					"image_check",
 					"clients_list",
 					"users_list",
 					"client_download"
@@ -15,6 +16,8 @@
 		"write": {
 			"ubus": {
 				"luci.ipsec_hwdsl2": [
+					"container_start",
+					"container_stop",
 					"client_add",
 					"client_revoke",
 					"client_delete",

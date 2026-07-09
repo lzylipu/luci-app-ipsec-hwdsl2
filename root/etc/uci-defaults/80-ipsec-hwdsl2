@@ -2,6 +2,9 @@
 
 # UCI defaults for luci-app-ipsec-hwdsl2
 # Creates /etc/config/ipsec-hwdsl2 with default Docker container parameters.
+# The `enabled` flag drives the smart container lifecycle:
+#   enabled=1 -> rpcd ensures a running hwdsl2 container (creates one from template if absent)
+#   enabled=0 -> rpcd stops the container but keeps it (restart-persistent)
 
 [ -f /etc/config/ipsec-hwdsl2 ] && exit 0
 
@@ -9,11 +12,15 @@ touch /etc/config/ipsec-hwdsl2
 
 uci -q batch <<EOF
 add ipsec-hwdsl2 global
+set ipsec-hwdsl2.@global[0].enabled='0'
 set ipsec-hwdsl2.@global[0].container_name='ipsec-vpn-server'
 set ipsec-hwdsl2.@global[0].image='hwdsl2/ipsec-vpn-server:latest'
 set ipsec-hwdsl2.@global[0].volume='ikev2-vpn-data:/etc/ipsec.d'
 set ipsec-hwdsl2.@global[0].auto_setup='1'
+set ipsec-hwdsl2.@global[0].vpn_ipsec_psk=''
+set ipsec-hwdsl2.@global[0].vpn_user=''
+set ipsec-hwdsl2.@global[0].vpn_password=''
+set ipsec-hwdsl2.@global[0].dns_srv1='1.1.1.1'
+set ipsec-hwdsl2.@global[0].dns_srv2='1.0.0.1'
+set ipsec-hwdsl2.@global[0].public_ip=''
 commit ipsec-hwdsl2
-EOF
-
-exit 0

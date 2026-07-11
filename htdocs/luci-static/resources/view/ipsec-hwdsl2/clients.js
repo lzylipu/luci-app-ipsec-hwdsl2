@@ -45,7 +45,7 @@ return view.extend({
         const r = await callRevoke(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' revoked')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' revoked')), 'success'); window.location.reload(); }
     },
 
     deleteClient: async function(name) {
@@ -54,7 +54,7 @@ return view.extend({
         const r = await callDelete(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' deleted')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' deleted')), 'success'); window.location.reload(); }
     },
 
     addClient: async function() {
@@ -67,7 +67,7 @@ return view.extend({
         const r = await callAdd(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' added')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' added')), 'success'); window.location.reload(); }
     },
 
     renderTable: function(clients) {

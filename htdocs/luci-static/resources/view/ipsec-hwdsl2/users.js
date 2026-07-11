@@ -18,7 +18,7 @@ return view.extend({
         const r = await callDelete(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error));
-        else { ui.addNotification(null, E('p', _('用户 ') + name + _(' deleted')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('用户 ') + name + _(' deleted')), 'success'); window.location.reload(); }
     },
 
     addUser: async function() {
@@ -37,7 +37,7 @@ return view.extend({
         const r = await callAdd(name, pass);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error));
-        else { ui.addNotification(null, E('p', _('用户 ') + name + _(' added')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('用户 ') + name + _(' added')), 'success'); window.location.reload(); }
     },
 
     renderTable: function(users) {

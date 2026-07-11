@@ -17,11 +17,7 @@ function container_name() {
 
 function exec_capture(cmd) {
     let p = popen(cmd + ' 2>&1', 'r');
-    let out = '';
-    let chunk;
-    while ((chunk = p.read('all')) !== null) {
-        out = out + chunk;
-    }
+    let out = p.read('all') || '';
     let rc = p.close();
     return { rc: rc, out: out };
 }

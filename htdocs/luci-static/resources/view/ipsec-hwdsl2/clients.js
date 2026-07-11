@@ -3,6 +3,7 @@
 'require rpc';
 'require ui';
 'require form';
+'require dom';
 
 const callList   = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'clients_list' });
 const callAdd    = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'client_add', params: ['name'] });
@@ -22,7 +23,6 @@ return view.extend({
             ui.hideModal();
             if (r.error) { ui.addNotification(null, E('p', r.error)); return; }
             
-            // Binary safe base64 decoding (using atob safely inside Uint8Array mapping)
             const bin = atob(r.content_base64);
             const bytes = new Uint8Array(bin.length);
             for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -40,21 +40,21 @@ return view.extend({
     },
 
     revokeClient: async function(name) {
-        if (!confirm(_('Revoke IKEv2 client "') + name + _('"? This blocks client reconnect immediately.'))) return;
+        if (!confirm(_('吊销 IKEv2 客户端 "') + name + _('"? 这将立即阻止该客户端重新连接。'))) return;
         ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在容器内吊销证书...')));
         const r = await callRevoke(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' revoked')), 'success'); window.location.reload(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' 已吊销')), 'success'); window.location.reload(); }
     },
 
     deleteClient: async function(name) {
-        if (!confirm(_('Permanently delete client "') + name + _('"? This cannot be undone.'))) return;
+        if (!confirm(_('永久删除客户端 "') + name + _('"? 此操作无法撤销。'))) return;
         ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在删除证书元数据...')));
         const r = await callDelete(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' deleted')), 'success'); window.location.reload(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' 已删除')), 'success'); window.location.reload(); }
     },
 
     addClient: async function() {
@@ -63,18 +63,58 @@ return view.extend({
         if (!/^[A-Za-z0-9_-]+$/.test(name)) {
             ui.addNotification(null, E('p', _('无效的客户端名称'))); return;
         }
-        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在容器内生成新证书（需要几秒钟）...')));
-        const r = await callAdd(name);
-        ui.hideModal();
-        if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' added')), 'success'); window.location.reload(); }
+        
+        const exists = this.clientsData.clients.some(c => c.name === name);
+        if (exists) {
+            ui.addNotification(null, E('p', _('该客户端名称已存在'))); return;
+        }
+
+        // 追加占位行并局部更新 UI
+        this.clientsData.clients.push({ name: name, status: 'creating' });
+        this.clientsData.total++;
+        this.updateUI();
+
+        try {
+            const r = await callAdd(name);
+            if (r.error) {
+                ui.addNotification(null, E('p', _('添加客户端 ') + name + _(' 失败: ') + r.error));
+                this.clientsData.clients = this.clientsData.clients.filter(c => c.name !== name);
+                this.clientsData.total--;
+                this.updateUI();
+            } else {
+                // 后端添加成功，重新调取列表刷新
+                const freshData = await callList();
+                this.clientsData = freshData || { clients: [], total: 0 };
+                this.updateUI();
+            }
+        } catch (e) {
+            ui.addNotification(null, E('p', _('添加客户端 ') + name + _(' 发生异常: ') + String(e)));
+            this.clientsData.clients = this.clientsData.clients.filter(c => c.name !== name);
+            this.clientsData.total--;
+            this.updateUI();
+        }
+    },
+
+    updateUI: function() {
+        const container = document.getElementById('clients_table_container');
+        if (container) {
+            dom.content(container, this.renderTable(this.clientsData.clients));
+        }
+        const legend = document.getElementById('clients_legend');
+        if (legend) {
+            legend.textContent = _('证书列表 (') + this.clientsData.total + _(')');
+        }
     },
 
     renderTable: function(clients) {
         const rows = (clients || []).map(c => {
             let statusClass = c.status === 'valid' ? 'success' :
-                              c.status === 'revoked' ? 'error' : 'warning';
+                              c.status === 'revoked' ? 'error' :
+                              c.status === 'creating' ? 'warning' : 'warning';
+            
+            let statusText = c.status === 'creating' ? _('创建中...') : c.status.toUpperCase();
             let actions = [];
+            
             if (c.status === 'valid') {
                 actions.push(E('button', {
                     'class': 'cbi-button cbi-button-apply',
@@ -97,14 +137,17 @@ return view.extend({
                     'click': ev => this.revokeClient(c.name)
                 }, _('吊销')));
             }
-            actions.push(E('button', {
-                'class': 'cbi-button cbi-button-remove',
-                'click': ev => this.deleteClient(c.name)
-            }, _('删除')));
+            
+            if (c.status !== 'creating') {
+                actions.push(E('button', {
+                    'class': 'cbi-button cbi-button-remove',
+                    'click': ev => this.deleteClient(c.name)
+                }, _('删除')));
+            }
 
             return E('tr', { 'class': 'tr' }, [
                 E('td', { 'class': 'td', 'style': 'font-weight:600;' }, c.name),
-                E('td', { 'class': 'td' }, E('span', { 'class': 'label ' + statusClass }, c.status.toUpperCase())),
+                E('td', { 'class': 'td' }, E('span', { 'class': 'label ' + statusClass }, statusText)),
                 E('td', { 'class': 'td cbi-section-actions' }, actions)
             ]);
         });
@@ -120,14 +163,16 @@ return view.extend({
     },
 
     render: function(data) {
-        const clients = (data && data.clients) || [];
+        this.clientsData = data || { clients: [], total: 0 };
+        const clients = this.clientsData.clients || [];
+        
         return E('div', { 'class': 'cbi-map' }, [
             E('h2', {}, _('IKEv2 客户端证书')),
             E('p', { 'class': 'cbi-map-descr' },
                 _('管理 IKEv2 模式的证书客户端。下载下方预构建的配置文件导入设备。')),
             E('div', { 'class': 'cbi-section' }, [
-                E('legend', {}, _('证书列表 (') + (data && data.total || 0) + _(')')),
-                this.renderTable(clients)
+                E('legend', { 'id': 'clients_legend' }, _('证书列表 (') + this.clientsData.total + _(')')),
+                E('div', { 'id': 'clients_table_container' }, this.renderTable(clients))
             ]),
             E('div', { 'class': 'cbi-page-actions' }, [
                 E('button', {

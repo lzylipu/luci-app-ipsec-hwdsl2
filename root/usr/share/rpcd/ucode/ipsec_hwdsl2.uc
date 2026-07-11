@@ -250,9 +250,10 @@ const methods = {
     },
 
     client_download: {
-        call: function(req) {
-            const name = req.name || '';
-            const fmt = req.format || 'p12';
+        args: { name: '', format: '' },
+        call: function(request) {
+            const name = request.args.name || '';
+            const fmt = request.args.format || 'p12';
             if (!match(name, /^[A-Za-z0-9_-]+$/)) return { error: 'invalid name' };
             
             let ext = fmt;
@@ -267,14 +268,15 @@ const methods = {
             if (r.rc != 0 || !r.out) return { error: 'file missing or read failed', code: r.rc };
             
             // Clean base64 output
-            let base64_cleaned = replace(r.out, /[\r\n\s]/, '');
+            let base64_cleaned = join('', split(r.out, /\s+/));
             return { content_base64: base64_cleaned, filename: name + '.' + ext };
         }
     },
 
     client_add: {
-        call: function(req) {
-            const name = req.name || '';
+        args: { name: '' },
+        call: function(request) {
+            const name = request.args.name || '';
             if (!match(name, /^[A-Za-z0-9_-]+$/)) return { error: 'invalid client name' };
             const r = docker_exec(IKEV2_SCRIPT + ' --addclient ' + name);
             if (r.rc != 0) return fail(r, 'addclient failed');
@@ -283,8 +285,9 @@ const methods = {
     },
 
     client_revoke: {
-        call: function(req) {
-            const name = req.name || '';
+        args: { name: '' },
+        call: function(request) {
+            const name = request.args.name || '';
             if (!match(name, /^[A-Za-z0-9_-]+$/)) return { error: 'invalid client name' };
             const r = docker_exec(IKEV2_SCRIPT + ' --revokeclient ' + name + ' --yes');
             if (r.rc != 0) return fail(r, 'revoke failed');
@@ -293,8 +296,9 @@ const methods = {
     },
 
     client_delete: {
-        call: function(req) {
-            const name = req.name || '';
+        args: { name: '' },
+        call: function(request) {
+            const name = request.args.name || '';
             if (!match(name, /^[A-Za-z0-9_-]+$/)) return { error: 'invalid client name' };
             const r = docker_exec(IKEV2_SCRIPT + ' --deleteclient ' + name + ' --yes');
             if (r.rc != 0) return fail(r, 'delete failed');
@@ -303,9 +307,10 @@ const methods = {
     },
 
     user_add: {
-        call: function(req) {
-            const name = (req.name || '').trim();
-            const pass = req.password || '';
+        args: { name: '', password: '' },
+        call: function(request) {
+            const name = (request.args.name || '').trim();
+            const pass = request.args.password || '';
             if (!match(name, /^[A-Za-z0-9_-]+$/) || !pass) return { error: 'invalid user/password' };
             if (match(pass, /["`$\\]/)) return { error: 'password contains forbidden characters' };
 
@@ -335,8 +340,9 @@ const methods = {
     },
 
     user_delete: {
-        call: function(req) {
-            const name = (req.name || '').trim();
+        args: { name: '' },
+        call: function(request) {
+            const name = (request.args.name || '').trim();
             if (!match(name, /^[A-Za-z0-9_-]+$/)) return { error: 'invalid user' };
             const cn = container_name();
 
@@ -360,6 +366,41 @@ const methods = {
             const r = exec_capture('docker restart ' + shell_quote(cn));
             if (r.rc != 0) return fail(r, 'restart failed');
             return { ok: true, raw: r.out };
+        }
+    },
+
+    config_export: {
+        call: function() {
+            const cn = container_name();
+            const r = exec_capture('docker exec ' + shell_quote(cn) + ' tar -cz -C / etc/ipsec.d etc/ppp/chap-secrets 2>/dev/null | base64');
+            if (r.rc != 0 || !r.out) return { error: 'tar packing failed', code: r.rc };
+            let base64_cleaned = join('', split(r.out, /\s+/));
+            return { content_base64: base64_cleaned, filename: 'ipsec-vpn-backup.tar.gz' };
+        }
+    },
+
+    config_import: {
+        args: { path: '' },
+        call: function(request) {
+            const path = request.args.path || '';
+            if (!match(path, /^\/tmp\/[A-Za-z0-9_\\-\\.]+$/)) {
+                return { error: 'invalid file path' };
+            }
+            const cn = container_name();
+            let r = exec_capture('docker cp ' + shell_quote(path) + ' ' + shell_quote(cn) + ':/tmp/backup.tar.gz');
+            if (r.rc != 0) return fail(r, 'docker cp failed');
+
+            r = exec_capture('docker exec ' + shell_quote(cn) + ' tar -xzf /tmp/backup.tar.gz -C /');
+            if (r.rc != 0) {
+                exec_capture('docker exec ' + shell_quote(cn) + ' rm -f /tmp/backup.tar.gz');
+                return fail(r, 'extract failed');
+            }
+
+            exec_capture('docker exec ' + shell_quote(cn) + ' rm -f /tmp/backup.tar.gz');
+            exec_capture('rm -f ' + shell_quote(path));
+            exec_capture('docker restart ' + shell_quote(cn));
+
+            return { ok: true };
         }
     }
 };

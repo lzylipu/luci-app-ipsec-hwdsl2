@@ -9,6 +9,8 @@ const callStart = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'container_
 const callStop = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'container_stop' });
 const callRestart = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'container_restart' });
 const callImageCheck = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'image_check' });
+const callExport = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'config_export' });
+const callImport = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'config_import', params: ['path'] });
 
 return view.extend({
     title: _('IPsec VPN (hwdsl2) 设置'),
@@ -91,6 +93,73 @@ return view.extend({
         s.anonymous = true;
         s.render_actions = function() {
             return E('div', { 'class': 'cbi-section-actions' }, [
+                E('button', {
+                    'class': 'cbi-button cbi-button-apply',
+                    'style': 'margin-right: 8px;',
+                    'click': async ev => {
+                        ev.target.disabled = true;
+                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在打包并导出 VPN 备份...')));
+                        try {
+                            const r = await callExport();
+                            ui.hideModal();
+                            if (r.error) {
+                                ui.addNotification(null, E('p', _('备份失败: ') + r.error));
+                            } else {
+                                const bin = atob(r.content_base64);
+                                const bytes = new Uint8Array(bin.length);
+                                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                                const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                                const url = URL.createObjectURL(blob);
+                                const a = E('a', { href: url, download: r.filename });
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+                                ui.addNotification(null, E('p', _('配置备份下载成功')), 'success');
+                            }
+                        } catch (err) {
+                            ui.hideModal();
+                            ui.addNotification(null, E('p', String(err)));
+                        } finally { ev.target.disabled = false; }
+                    }
+                }, _('导出配置备份')),
+
+                E('button', {
+                    'class': 'cbi-button cbi-button-action',
+                    'style': 'margin-right: 8px;',
+                    'click': ev => {
+                        const input = E('input', {
+                            type: 'file',
+                            style: 'display:none',
+                            change: changeEv => {
+                                const file = changeEv.target.files[0];
+                                if (!file) return;
+                                ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在上传并恢复配置...')));
+                                ui.uploadFile('/tmp/ipsec-vpn-backup.tar.gz', changeEv.target)
+                                    .then(res => {
+                                        return callImport('/tmp/ipsec-vpn-backup.tar.gz');
+                                    })
+                                    .then(res => {
+                                        ui.hideModal();
+                                        if (res.error) {
+                                            ui.addNotification(null, E('p', _('导入失败: ') + res.error));
+                                        } else {
+                                            ui.addNotification(null, E('p', _('配置已成功导入，容器已重启！')), 'success');
+                                            window.location.reload();
+                                        }
+                                    })
+                                    .catch(err => {
+                                        ui.hideModal();
+                                        ui.addNotification(null, E('p', _('文件上传失败: ') + (err.message || err)));
+                                    });
+                            }
+                        });
+                        document.body.appendChild(input);
+                        input.click();
+                        document.body.removeChild(input);
+                    }
+                }, _('导入配置备份')),
+
                 E('button', {
                     'class': 'cbi-button cbi-button-apply',
                     'style': 'margin-right: 8px;',

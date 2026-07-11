@@ -55,7 +55,7 @@ const methods = {
             let matched_line = null;
             if (probe.rc == 0 && probe.out) {
                 const lines = split(trim(probe.out), '\n');
-                for (let line of lines) {
+                for (let line in lines) {
                     const parts = split(line, '|');
                     if (parts[0] == cn) {
                         matched_line = line;
@@ -106,7 +106,7 @@ const methods = {
             const r = exec_capture('docker images --format "{{.Repository}}:{{.Tag}}"');
             if (r.rc != 0) return { error: 'docker images failed', rc: r.rc };
             const lines = split(trim(r.out), '\n');
-            for (let line of lines) {
+            for (let line in lines) {
                 if (trim(line) == img) {
                     return { pulled: true };
                 }
@@ -125,7 +125,7 @@ const methods = {
             let exists = false;
             if (probe.rc == 0 && probe.out) {
                 const lines = split(trim(probe.out), '\n');
-                for (let line of lines) {
+                for (let line in lines) {
                     if (trim(line) == cn) {
                         exists = true;
                         break;
@@ -221,7 +221,7 @@ const methods = {
             const pw = exec_capture(pw_cmd);
             const l2tp_users = {};
             if (chap.out) {
-                for (let line of split(chap.out, '\n')) {
+                for (let line in split(chap.out, '\n')) {
                     const m = match(line, /^"([^"]+)"\s+l2tpd\s+"([^"]+)"\s+\*/);
                     if (m) {
                         l2tp_users[m[1]] = m[2];
@@ -230,7 +230,7 @@ const methods = {
             }
             const xauth_users = {};
             if (pw.out) {
-                for (let line of split(pw.out, '\n')) {
+                for (let line in split(pw.out, '\n')) {
                     const parts = split(line, ':');
                     if (length(parts) >= 3) {
                         xauth_users[parts[0]] = parts[1];

@@ -37,6 +37,74 @@ function fail(ctx, msg) {
     return { error: msg, code: ctx.rc, raw: substr(ctx.out, 0, 400) };
 }
 
+function run_container_start() {
+    const cn = container_name();
+    
+    // Check if container already exists (any state)
+    const probe = exec_capture('docker ps -a --format "{{.Names}}"');
+    let exists = false;
+    if (probe.rc == 0 && probe.out) {
+        const lines = split(trim(probe.out), '\n');
+        for (let line in lines) {
+            if (trim(line) == cn) {
+                exists = true;
+                break;
+            }
+        }
+    }
+
+    if (exists) {
+        // If it exists, just start it
+        const r = exec_capture('docker start ' + shell_quote(cn));
+        if (r.rc != 0) return fail(r, 'docker start failed');
+        return { ok: true, action: 'start' };
+    }
+
+    // Create and start container from UCI template
+    const img = uci.get('ipsec-hwdsl2', 'global', 'image') || 'hwdsl2/ipsec-vpn-server:latest';
+    const volume = uci.get('ipsec-hwdsl2', 'global', 'volume') || 'ikev2-vpn-data:/etc/ipsec.d';
+    
+    let psk = uci.get('ipsec-hwdsl2', 'global', 'vpn_ipsec_psk') || '';
+    let user = uci.get('ipsec-hwdsl2', 'global', 'vpn_user') || '';
+    let pass = uci.get('ipsec-hwdsl2', 'global', 'vpn_password') || '';
+    
+    // Fallback generation for empty configs to ensure instant usability
+    if (!psk) { psk = 'ipsec_psk_gen_' + substr(btoa(readfile('/dev/urandom', 12)), 0, 12); }
+    if (!user) { user = 'vpnuser'; }
+    if (!pass) { pass = 'vpn_pass_gen_' + substr(btoa(readfile('/dev/urandom', 12)), 0, 12); }
+
+    let dns1 = uci.get('ipsec-hwdsl2', 'global', 'dns_srv1') || '1.1.1.1';
+    let dns2 = uci.get('ipsec-hwdsl2', 'global', 'dns_srv2') || '1.0.0.1';
+    let pub_ip = uci.get('ipsec-hwdsl2', 'global', 'public_ip') || '';
+
+    let run_cmd = 'docker run --name ' + shell_quote(cn) +
+                  ' --privileged ' +
+                  ' -p 500:500/udp -p 4500:4500/udp ' +
+                  ' -v ' + shell_quote(volume) +
+                  ' -e VPN_IPSEC_PSK=' + shell_quote(psk) +
+                  ' -e VPN_USER=' + shell_quote(user) +
+                  ' -e VPN_PASSWORD=' + shell_quote(pass) +
+                  ' -e VPN_DNS_SRV1=' + shell_quote(dns1) +
+                  ' -e VPN_DNS_SRV2=' + shell_quote(dns2);
+
+    if (pub_ip) {
+        run_cmd += ' -e VPN_DNS_NAME=' + shell_quote(pub_ip);
+    }
+
+    run_cmd += ' -d ' + shell_quote(img);
+
+    const r = exec_capture(run_cmd);
+    if (r.rc != 0) return fail(r, 'docker run failed');
+
+    // Save generated configs back to UCI if they were blank
+    uci.set('ipsec-hwdsl2', 'global', 'vpn_ipsec_psk', psk);
+    uci.set('ipsec-hwdsl2', 'global', 'vpn_user', user);
+    uci.set('ipsec-hwdsl2', 'global', 'vpn_password', pass);
+    uci.commit('ipsec-hwdsl2');
+
+    return { ok: true, action: 'create_run' };
+}
+
 const methods = {
 
     // Status: Check running container, ports, and image
@@ -114,74 +182,9 @@ const methods = {
     // Start / Ensure the container runs (or create it from template)
     container_start: {
         call: function() {
-            const cn = container_name();
-            
-            // Check if container already exists (any state)
-            const probe = exec_capture('docker ps -a --format "{{.Names}}"');
-            let exists = false;
-            if (probe.rc == 0 && probe.out) {
-                const lines = split(trim(probe.out), '\n');
-                for (let line in lines) {
-                    if (trim(line) == cn) {
-                        exists = true;
-                        break;
-                    }
-                }
-            }
-
-            if (exists) {
-                // If it exists, just start it
-                const r = exec_capture('docker start ' + shell_quote(cn));
-                if (r.rc != 0) return fail(r, 'docker start failed');
-                return { ok: true, action: 'start' };
-            }
-
-            // Create and start container from UCI template
-            const img = uci.get('ipsec-hwdsl2', 'global', 'image') || 'hwdsl2/ipsec-vpn-server:latest';
-            const volume = uci.get('ipsec-hwdsl2', 'global', 'volume') || 'ikev2-vpn-data:/etc/ipsec.d';
-            
-            let psk = uci.get('ipsec-hwdsl2', 'global', 'vpn_ipsec_psk') || '';
-            let user = uci.get('ipsec-hwdsl2', 'global', 'vpn_user') || '';
-            let pass = uci.get('ipsec-hwdsl2', 'global', 'vpn_password') || '';
-            
-            // Fallback generation for empty configs to ensure instant usability
-            if (!psk) { psk = 'ipsec_psk_gen_' + substr(btoa(readfile('/dev/urandom', 12)), 0, 12); }
-            if (!user) { user = 'vpnuser'; }
-            if (!pass) { pass = 'vpn_pass_gen_' + substr(btoa(readfile('/dev/urandom', 12)), 0, 12); }
-
-            let dns1 = uci.get('ipsec-hwdsl2', 'global', 'dns_srv1') || '1.1.1.1';
-            let dns2 = uci.get('ipsec-hwdsl2', 'global', 'dns_srv2') || '1.0.0.1';
-            let pub_ip = uci.get('ipsec-hwdsl2', 'global', 'public_ip') || '';
-
-            let run_cmd = 'docker run --name ' + shell_quote(cn) +
-                          ' --privileged ' +
-                          ' -p 500:500/udp -p 4500:4500/udp ' +
-                          ' -v ' + shell_quote(volume) +
-                          ' -e VPN_IPSEC_PSK=' + shell_quote(psk) +
-                          ' -e VPN_USER=' + shell_quote(user) +
-                          ' -e VPN_PASSWORD=' + shell_quote(pass) +
-                          ' -e VPN_DNS_SRV1=' + shell_quote(dns1) +
-                          ' -e VPN_DNS_SRV2=' + shell_quote(dns2);
-
-            if (pub_ip) {
-                run_cmd += ' -e VPN_DNS_NAME=' + shell_quote(pub_ip);
-            }
-
-            run_cmd += ' -d ' + shell_quote(img);
-
-            const r = exec_capture(run_cmd);
-            if (r.rc != 0) return fail(r, 'docker run failed');
-
-            // Save generated configs back to UCI if they were blank
-            uci.set('ipsec-hwdsl2', 'global', 'vpn_ipsec_psk', psk);
-            uci.set('ipsec-hwdsl2', 'global', 'vpn_user', user);
-            uci.set('ipsec-hwdsl2', 'global', 'vpn_password', pass);
-            uci.commit('ipsec-hwdsl2');
-
-            return { ok: true, action: 'create_run' };
+            return run_container_start();
         }
     },
-
     // Stop container
     container_stop: {
         call: function() {
@@ -372,9 +375,72 @@ const methods = {
     config_export: {
         call: function() {
             const cn = container_name();
-            const r = exec_capture('docker exec ' + shell_quote(cn) + ' tar -cz -C / etc/ipsec.d etc/ppp/chap-secrets 2>/dev/null | base64');
-            if (r.rc != 0 || !r.out) return { error: 'tar packing failed', code: r.rc };
-            let base64_cleaned = join('', split(r.out, /\s+/));
+            
+            // 1. 如果容器运行中，尝试从它的运行时配置中把最新的环境变量拉回来同步回 UCI
+            let inspect_env = exec_capture('docker inspect --format \'{{json .Config.Env}}\' ' + shell_quote(cn));
+            if (inspect_env.rc == 0 && inspect_env.out) {
+                try {
+                    let env_arr = json(inspect_env.out);
+                    if (type(env_arr) == 'array') {
+                        for (let env_str in env_arr) {
+                            let kv = split(env_str, '=');
+                            if (length(kv) >= 2) {
+                                let k = kv[0];
+                                let v = join('=', slice(kv, 1));
+                                if (k == 'VPN_IPSEC_PSK') uci.set('ipsec-hwdsl2', 'global', 'vpn_ipsec_psk', v);
+                                else if (k == 'VPN_USER') uci.set('ipsec-hwdsl2', 'global', 'vpn_user', v);
+                                else if (k == 'VPN_PASSWORD') uci.set('ipsec-hwdsl2', 'global', 'vpn_password', v);
+                                else if (k == 'VPN_DNS_SRV1') uci.set('ipsec-hwdsl2', 'global', 'dns_srv1', v);
+                                else if (k == 'VPN_DNS_SRV2') uci.set('ipsec-hwdsl2', 'global', 'dns_srv2', v);
+                                else if (k == 'VPN_DNS_NAME') uci.set('ipsec-hwdsl2', 'global', 'public_ip', v);
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            // 2. 尝试提取挂载卷路径同步回 UCI
+            let inspect_mounts = exec_capture('docker inspect --format \'{{json .Mounts}}\' ' + shell_quote(cn));
+            if (inspect_mounts.rc == 0 && inspect_mounts.out) {
+                try {
+                    let mounts = json(inspect_mounts.out);
+                    if (type(mounts) == 'array') {
+                        for (let m in mounts) {
+                            if (m.Destination == '/etc/ipsec.d') {
+                                let vol_str = m.Source + ':/etc/ipsec.d';
+                                uci.set('ipsec-hwdsl2', 'global', 'volume', vol_str);
+                            }
+                        }
+                    }
+                } catch(e) {}
+            }
+            
+            // 固化可能更新的配置
+            uci.commit('ipsec-hwdsl2');
+
+            // 3. 创建临时打包目录，将 UCI 配置与容器内数据一并打包
+            exec_capture('mkdir -p /tmp/ipsec_backup');
+            exec_capture('cp /etc/config/ipsec-hwdsl2 /tmp/ipsec_backup/ipsec-hwdsl2.uci');
+            
+            let pack_r = exec_capture('docker exec ' + shell_quote(cn) + ' tar -cz -C / etc/ipsec.d etc/ppp/chap-secrets 2>/dev/null > /tmp/ipsec_backup/data.tar.gz');
+            if (pack_r.rc != 0) {
+                // 如果容器内打包失败（比如容器根本没启动），尝试读取 uci 中映射的本地挂载目录直接打包，做备用兼容
+                let vol_path = uci.get('ipsec-hwdsl2', 'global', 'volume') || '';
+                let parts = split(vol_path, ':');
+                if (length(parts) >= 2 && stat(parts[0])) {
+                    // 本地挂载目录存在，直接打包它
+                    exec_capture('tar -cz -C ' + shell_quote(parts[0]) + ' . 2>/dev/null > /tmp/ipsec_backup/data.tar.gz');
+                }
+            }
+
+            let final_tar = exec_capture('tar -cz -C /tmp/ipsec_backup . | base64');
+            exec_capture('rm -rf /tmp/ipsec_backup');
+
+            if (final_tar.rc != 0 || !final_tar.out) {
+                return { error: 'Failed to create final backup archive' };
+            }
+
+            let base64_cleaned = join('', split(final_tar.out, /\s+/));
             return { content_base64: base64_cleaned, filename: 'ipsec-vpn-backup.tar.gz' };
         }
     },
@@ -386,19 +452,64 @@ const methods = {
             if (!match(path, /^\/tmp\/[A-Za-z0-9_\\-\\.]+$/)) {
                 return { error: 'invalid file path' };
             }
-            const cn = container_name();
-            let r = exec_capture('docker cp ' + shell_quote(path) + ' ' + shell_quote(cn) + ':/tmp/backup.tar.gz');
-            if (r.rc != 0) return fail(r, 'docker cp failed');
 
-            r = exec_capture('docker exec ' + shell_quote(cn) + ' tar -xzf /tmp/backup.tar.gz -C /');
-            if (r.rc != 0) {
-                exec_capture('docker exec ' + shell_quote(cn) + ' rm -f /tmp/backup.tar.gz');
-                return fail(r, 'extract failed');
+            // 1. 解压包到临时目录
+            exec_capture('mkdir -p /tmp/ipsec_restore');
+            let unpack_r = exec_capture('tar -xzf ' + shell_quote(path) + ' -C /tmp/ipsec_restore');
+            if (unpack_r.rc != 0) {
+                exec_capture('rm -rf /tmp/ipsec_restore');
+                return { error: 'Invalid backup file format' };
             }
 
-            exec_capture('docker exec ' + shell_quote(cn) + ' rm -f /tmp/backup.tar.gz');
-            exec_capture('rm -f ' + shell_quote(path));
+            // 2. 恢复 UCI 配置
+            let has_uci = stat('/tmp/ipsec_restore/ipsec-hwdsl2.uci');
+            if (has_uci) {
+                exec_capture('cp /tmp/ipsec_restore/ipsec-hwdsl2.uci /etc/config/ipsec-hwdsl2');
+                uci.unload('ipsec-hwdsl2');
+            }
+
+            const cn = container_name();
+
+            // 3. 检查同名容器是否存在，若存在先强制清理，以便使用最新的环境变量/挂载配置重新 Run
+            let check_cn = exec_capture('docker ps -a --format "{{.Names}}"');
+            let exists = false;
+            if (check_cn.rc == 0 && check_cn.out) {
+                let lines = split(trim(check_cn.out), '\n');
+                for (let line in lines) {
+                    if (trim(line) == cn) {
+                        exists = true;
+                        break;
+                    }
+                }
+            }
+
+            if (exists) {
+                exec_capture('docker rm -f ' + shell_quote(cn));
+            }
+
+            // 4. 调用 container_start 重新跑起来（会自动应用恢复后的 UCI 中的各种环境变量和挂载卷）
+            let run_res = run_container_start();
+            if (run_res.error) {
+                exec_capture('rm -rf /tmp/ipsec_restore');
+                return { error: 'Failed to recreate container: ' + run_res.error };
+            }
+
+            // 5. 将证书和 chap-secrets 复制回容器
+            let has_data = stat('/tmp/ipsec_restore/data.tar.gz');
+            if (has_data) {
+                let cp_r = exec_capture('docker cp /tmp/ipsec_restore/data.tar.gz ' + shell_quote(cn) + ':/tmp/data.tar.gz');
+                if (cp_r.rc == 0) {
+                    exec_capture('docker exec ' + shell_quote(cn) + ' tar -xzf /tmp/data.tar.gz -C /');
+                    exec_capture('docker exec ' + shell_quote(cn) + ' rm -f /tmp/data.tar.gz');
+                }
+            }
+
+            // 6. 重启容器以重载所有数据
             exec_capture('docker restart ' + shell_quote(cn));
+
+            // 清理
+            exec_capture('rm -rf /tmp/ipsec_restore');
+            exec_capture('rm -f ' + shell_quote(path));
 
             return { ok: true };
         }

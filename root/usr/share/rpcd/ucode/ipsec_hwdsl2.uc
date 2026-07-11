@@ -79,6 +79,8 @@ function run_container_start() {
 
     let run_cmd = 'docker run --name ' + shell_quote(cn) +
                   ' --privileged ' +
+                  ' --restart=always ' +
+                  ' -v /lib/modules:/lib/modules:ro ' +
                   ' -p 500:500/udp -p 4500:4500/udp ' +
                   ' -v ' + shell_quote(volume) +
                   ' -e VPN_IPSEC_PSK=' + shell_quote(psk) +

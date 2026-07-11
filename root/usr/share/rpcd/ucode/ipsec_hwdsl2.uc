@@ -11,6 +11,21 @@ const uci = cursor();
 const CONTAINER_DEFAULT = 'ipsec-vpn-server';
 const IKEV2_SCRIPT = '/opt/src/ikev2.sh';
 
+function exec_capture(cmd) {
+    let p = popen(cmd + ' 2>&1', 'r');
+    let out = p.read('all') || '';
+    let rc = p.close();
+    return { rc: rc, out: out };
+}
+
+function shell_quote(s) {
+    return "'" + replace(s, "'", "'\''") + "'";
+}
+
+function fail(ctx, msg) {
+    return { error: msg, code: ctx.rc, raw: substr(ctx.out, 0, 400) };
+}
+
 function get_global_section_id() {
     let sid = null;
     uci.foreach('ipsec-hwdsl2', 'global', function(s) {
@@ -24,26 +39,11 @@ function container_name() {
     return uci.get('ipsec-hwdsl2', 'global', 'container_name') || CONTAINER_DEFAULT;
 }
 
-function exec_capture(cmd) {
-    let p = popen(cmd + ' 2>&1', 'r');
-    let out = p.read('all') || '';
-    let rc = p.close();
-    return { rc: rc, out: out };
-}
-
 // Safely execute docker commands using shell_quote or strict variables
 function docker_exec(args) {
     const cn = container_name();
     const cmd = 'docker exec ' + shell_quote(cn) + ' ' + args;
     return exec_capture(cmd);
-}
-
-function shell_quote(s) {
-    return "'" + replace(s, "'", "'\\''") + "'";
-}
-
-function fail(ctx, msg) {
-    return { error: msg, code: ctx.rc, raw: substr(ctx.out, 0, 400) };
 }
 
 function run_container_start() {
@@ -53,7 +53,8 @@ function run_container_start() {
     const probe = exec_capture('docker ps -a --format "{{.Names}}"');
     let exists = false;
     if (probe.rc == 0 && probe.out) {
-        const lines = split(trim(probe.out), '\n');
+        const lines = split(trim(probe.out), '
+');
         for (let line in lines) {
             if (trim(line) == cn) {
                 exists = true;

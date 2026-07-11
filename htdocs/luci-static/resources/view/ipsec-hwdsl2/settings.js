@@ -51,8 +51,8 @@ return view.extend({
         o.default = 'hwdsl2/ipsec-vpn-server:latest';
         o.rmempty = false;
 
-        o = s.option(form.Value, 'volume', _('挂载卷路径'),
-            _('证书持久化挂载卷。格式: volume_name:/etc/ipsec.d'));
+        o = s.option(form.Value, 'volume', _('挂载卷/宿主机映射路径'),
+            _('证书持久化存储路径。容器内部 /etc/ipsec.d 的所有证书和密钥将持久化于此卷。导入导出及跨机迁移时均自动对接此目录，实现一键无缝还原。默认: ikev2-vpn-data:/etc/ipsec.d'));
         o.default = 'ikev2-vpn-data:/etc/ipsec.d';
         o.rmempty = false;
 

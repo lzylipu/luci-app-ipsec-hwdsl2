@@ -58,7 +58,6 @@ return view.extend({
 
         s = m.section(form.TypedSection, 'global', _('容器模板参数'));
         s.anonymous = true;
-        s.depends('enabled', '1');
 
         o = s.option(form.Value, 'vpn_ipsec_psk', _('IPsec 预共享密钥 (PSK)'),
             _('用于 L2TP/IPsec 和 XAuth。留空则自动生成高强度安全密钥。'));
@@ -91,103 +90,109 @@ return view.extend({
         // Container actions
         s = m.section(form.TypedSection, 'global', _('操作'));
         s.anonymous = true;
-        s.render_actions = function() {
-            return E('div', { 'class': 'cbi-section-actions' }, [
-                E('button', {
-                    'class': 'cbi-button cbi-button-apply',
-                    'style': 'margin-right: 8px;',
-                    'click': async ev => {
-                        ev.target.disabled = true;
-                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在打包并导出 VPN 备份...')));
-                        try {
-                            const r = await callExport();
-                            ui.hideModal();
-                            if (r.error) {
-                                ui.addNotification(null, E('p', _('备份失败: ') + r.error));
-                            } else {
-                                const bin = atob(r.content_base64);
-                                const bytes = new Uint8Array(bin.length);
-                                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-                                const blob = new Blob([bytes], { type: 'application/octet-stream' });
-                                const url = URL.createObjectURL(blob);
-                                const a = E('a', { href: url, download: r.filename });
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                URL.revokeObjectURL(url);
-                                ui.addNotification(null, E('p', _('配置备份下载成功')), 'success');
-                            }
-                        } catch (err) {
-                            ui.hideModal();
-                            ui.addNotification(null, E('p', String(err)));
-                        } finally { ev.target.disabled = false; }
-                    }
-                }, _('导出配置备份')),
 
-                E('button', {
-                    'class': 'cbi-button cbi-button-action',
-                    'style': 'margin-right: 8px;',
-                    'click': ev => {
-                        const input = E('input', {
-                            type: 'file',
-                            style: 'display:none',
-                            change: changeEv => {
-                                const file = changeEv.target.files[0];
-                                if (!file) return;
-                                ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在上传并恢复配置...')));
-                                ui.uploadFile('/tmp/ipsec-vpn-backup.tar.gz', changeEv.target)
-                                    .then(res => {
-                                        return callImport('/tmp/ipsec-vpn-backup.tar.gz');
-                                    })
-                                    .then(res => {
-                                        ui.hideModal();
-                                        if (res.error) {
-                                            ui.addNotification(null, E('p', _('导入失败: ') + res.error));
-                                        } else {
-                                            ui.addNotification(null, E('p', _('配置已成功导入，容器已重启！')), 'success');
-                                            window.location.reload();
-                                        }
-                                    })
-                                    .catch(err => {
-                                        ui.hideModal();
-                                        ui.addNotification(null, E('p', _('文件上传失败: ') + (err.message || err)));
-                                    });
-                            }
-                        });
-                        document.body.appendChild(input);
-                        input.click();
-                        document.body.removeChild(input);
-                    }
-                }, _('导入配置备份')),
+        o = s.option(form.DummyValue, '_actions');
+        o.rawhtml = true;
+        o.render = function(section_id) {
+            return E('div', { 'class': 'cbi-value' }, [
+                E('label', { 'class': 'cbi-value-title' }, _('管理操作')),
+                E('div', { 'class': 'cbi-value-field' }, [
+                    E('button', {
+                        'class': 'cbi-button cbi-button-apply',
+                        'style': 'margin-right: 8px;',
+                        'click': async ev => {
+                            ev.target.disabled = true;
+                            ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在打包并导出 VPN 备份...')));
+                            try {
+                                const r = await callExport();
+                                ui.hideModal();
+                                if (r.error) {
+                                    ui.addNotification(null, E('p', _('备份失败: ') + r.error));
+                                } else {
+                                    const bin = atob(r.content_base64);
+                                    const bytes = new Uint8Array(bin.length);
+                                    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                                    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = E('a', { href: url, download: r.filename });
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                    ui.addNotification(null, E('p', _('配置备份下载成功')), 'success');
+                                }
+                            } catch (err) {
+                                ui.hideModal();
+                                ui.addNotification(null, E('p', String(err)));
+                            } finally { ev.target.disabled = false; }
+                        }
+                    }, _('导出配置备份')),
 
-                E('button', {
-                    'class': 'cbi-button cbi-button-apply',
-                    'style': 'margin-right: 8px;',
-                    'click': async ev => {
-                        ev.target.disabled = true;
-                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在重启 Docker 容器...')));
-                        try {
-                            const r = await callRestart();
-                            ui.hideModal();
-                            if (r.error) ui.addNotification(null, E('p', r.error));
-                            else ui.addNotification(null, E('p', _('容器重启成功')), 'success');
-                        } finally { ev.target.disabled = false; }
-                    }
-                }, _('重启容器')),
-                
-                E('button', {
-                    'class': 'cbi-button cbi-button-negative',
-                    'click': async ev => {
-                        if (!confirm(_('强制停止容器？VPN 隧道将立即断开。'))) return;
-                        ev.target.disabled = true;
-                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在停止容器...')));
-                        try {
-                            await callStop();
-                            ui.hideModal();
-                            ui.addNotification(null, E('p', _('容器已停止')), 'success');
-                        } finally { ev.target.disabled = false; }
-                    }
-                }, _('强制停止容器'))
+                    E('button', {
+                        'class': 'cbi-button cbi-button-action',
+                        'style': 'margin-right: 8px;',
+                        'click': ev => {
+                            const input = E('input', {
+                                type: 'file',
+                                style: 'display:none',
+                                change: changeEv => {
+                                    const file = changeEv.target.files[0];
+                                    if (!file) return;
+                                    ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在上传并恢复配置...')));
+                                    ui.uploadFile('/tmp/ipsec-vpn-backup.tar.gz', changeEv.target)
+                                        .then(res => {
+                                            return callImport('/tmp/ipsec-vpn-backup.tar.gz');
+                                        })
+                                        .then(res => {
+                                            ui.hideModal();
+                                            if (res.error) {
+                                                ui.addNotification(null, E('p', _('导入失败: ') + res.error));
+                                            } else {
+                                                ui.addNotification(null, E('p', _('配置已成功导入，容器已重启！')), 'success');
+                                                window.location.reload();
+                                            }
+                                        })
+                                        .catch(err => {
+                                            ui.hideModal();
+                                            ui.addNotification(null, E('p', _('文件上传失败: ') + (err.message || err)));
+                                        });
+                                }
+                            });
+                            document.body.appendChild(input);
+                            input.click();
+                            document.body.removeChild(input);
+                        }
+                    }, _('导入配置备份')),
+
+                    E('button', {
+                        'class': 'cbi-button cbi-button-apply',
+                        'style': 'margin-right: 8px;',
+                        'click': async ev => {
+                            ev.target.disabled = true;
+                            ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在重启 Docker 容器...')));
+                            try {
+                                const r = await callRestart();
+                                ui.hideModal();
+                                if (r.error) ui.addNotification(null, E('p', r.error));
+                                else ui.addNotification(null, E('p', _('容器重启成功')), 'success');
+                            } finally { ev.target.disabled = false; }
+                        }
+                    }, _('重启容器')),
+                    
+                    E('button', {
+                        'class': 'cbi-button cbi-button-negative',
+                        'click': async ev => {
+                            if (!confirm(_('强制停止容器？VPN 隧道将立即断开。'))) return;
+                            ev.target.disabled = true;
+                            ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在停止容器...')));
+                            try {
+                                await callStop();
+                                ui.hideModal();
+                                ui.addNotification(null, E('p', _('容器已停止')), 'success');
+                            } finally { ev.target.disabled = false; }
+                        }
+                    }, _('强制停止容器'))
+                ])
             ]);
         };
 

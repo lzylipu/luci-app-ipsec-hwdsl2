@@ -111,7 +111,7 @@ return view.extend({
             }
         };
 
-        o = s.option(form.Button, '_import', _('导入配置备份'), _('上传已有的 IPsec 备份压缩包，自动恢复宿主机目录并重建容器。'));
+        o = s.option(form.Button, '_import', _('导入配置备份'), _('上传已有备份包（.tar.gz 或 .zip），自动恢复 data 目录、ipsec.env 等配置并重建容器。'));
         o.inputstyle = 'action';
         o.onclick = function(ev) {
             const input = E('input', {

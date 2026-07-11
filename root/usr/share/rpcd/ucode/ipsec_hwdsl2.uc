@@ -510,24 +510,77 @@ const methods = {
         call: function(request) {
             const args = request.args || {};
             const path = args.path || '';
-            if (!match(path, /^\/tmp\/[A-Za-z0-9_\\-\\.]+$/)) {
+            if (!match(path, /^\/tmp\/[A-Za-z0-9_.-]+$/)) {
                 return { error: 'invalid file path' };
             }
 
-            // 1. 解压到临时目录
+            // 1. 解压到临时目录 — 读取文件头魔数探测格式 (不依赖 file 命令)
             exec_capture('rm -rf /tmp/ipsec_restore');
             exec_capture('mkdir -p /tmp/ipsec_restore');
-            let unpack_r = exec_capture('tar -xzf ' + shell_quote(path) + ' -C /tmp/ipsec_restore');
+            let magic = exec_capture('hexdump -C ' + shell_quote(path) + ' | head -1');
+            let magic_str = magic.out || '';
+            let unpack_cmd = '';
+            if (match(magic_str, /1f 8b/)) {
+                // gzip / tar.gz
+                unpack_cmd = 'tar -xzf ' + shell_quote(path) + ' -C /tmp/ipsec_restore';
+            } else if (match(magic_str, /50 4b 03|50 4b 05/)) {
+                // ZIP (PK 头)
+                unpack_cmd = 'unzip -o ' + shell_quote(path) + ' -d /tmp/ipsec_restore';
+            } else {
+                exec_capture('rm -rf /tmp/ipsec_restore');
+                return { error: '不支持的压缩格式，请使用 .tar.gz 或 .zip' };
+            }
+            let unpack_r = exec_capture(unpack_cmd);
             if (unpack_r.rc != 0) {
                 exec_capture('rm -rf /tmp/ipsec_restore');
-                return { error: 'Invalid backup file format' };
+                return { error: 'Failed to extract backup file (rc=' + unpack_r.rc + ')' };
             }
 
-            // 2. 优先恢复 UCI 配置
-            let has_uci = stat('/tmp/ipsec_restore/ipsec-hwdsl2.uci');
+            // 1b. 容错处理：如果解压后多了一层子目录，自动找到含 data/ 的层级
+            let restore_base = '/tmp/ipsec_restore';
+            if (!stat(restore_base + '/data') && !stat(restore_base + '/ipsec.env') && !stat(restore_base + '/chap-secrets')) {
+                let find_r = exec_capture('find /tmp/ipsec_restore -maxdepth 3 -name cert9.db 2>/dev/null | head -1');
+                if (find_r.out && trim(find_r.out) != '') {
+                    let cert_path = trim(find_r.out);
+                    let data_dir = substr(cert_path, 0, length(cert_path) - length('cert9.db'));
+                    data_dir = trim(replace(data_dir, /\/+$/, ''));
+                    if (stat(data_dir)) {
+                        let parent_dir = substr(data_dir, 0, length(data_dir) - 5);
+                        parent_dir = trim(replace(parent_dir, /\/+$/, ''));
+                        if (stat(parent_dir + '/data') || stat(parent_dir + '/ipsec.env') || stat(parent_dir + '/chap-secrets')) {
+                            restore_base = parent_dir;
+                        }
+                    }
+                }
+            }
+
+            // 2. 优先恢复 UCI 配置（如果存在）
+            let has_uci = stat(restore_base + '/ipsec-hwdsl2.uci');
             if (has_uci) {
-                exec_capture('cp /tmp/ipsec_restore/ipsec-hwdsl2.uci /etc/config/ipsec-hwdsl2');
+                exec_capture('cp ' + shell_quote(restore_base + '/ipsec-hwdsl2.uci') + ' /etc/config/ipsec-hwdsl2');
                 uci.unload('ipsec-hwdsl2');
+            }
+
+            // 2b. 如果有 ipsec.env，从环境变量恢复 UCI 配置（兼容从 Docker 直接导出的备份）
+            let has_env = stat(restore_base + '/ipsec.env');
+            if (has_env && !has_uci) {
+                let env_content = readfile(restore_base + '/ipsec.env') || '';
+                let env_lines = split(env_content, '\n');
+                for (let i = 0; i < length(env_lines); i++) {
+                    let line = trim(env_lines[i]);
+                    if (!line || substr(line, 0, 1) == '#') continue;
+                    let eq_pos = index(line, '=');
+                    if (eq_pos < 0) continue;
+                    let key = trim(substr(line, 0, eq_pos));
+                    let val = trim(substr(line, eq_pos + 1));
+                    if (key == 'VPN_IPSEC_PSK') uci.set('ipsec-hwdsl2', 'global', 'vpn_ipsec_psk', val);
+                    else if (key == 'VPN_USER') uci.set('ipsec-hwdsl2', 'global', 'vpn_user', val);
+                    else if (key == 'VPN_PASSWORD') uci.set('ipsec-hwdsl2', 'global', 'vpn_password', val);
+                    else if (key == 'VPN_DNS_SRV1') uci.set('ipsec-hwdsl2', 'global', 'dns_srv1', val);
+                    else if (key == 'VPN_DNS_SRV2') uci.set('ipsec-hwdsl2', 'global', 'dns_srv2', val);
+                    else if (key == 'VPN_DNS_NAME') uci.set('ipsec-hwdsl2', 'global', 'public_ip', val);
+                }
+                uci.commit('ipsec-hwdsl2');
             }
 
             const cn = container_name();
@@ -558,13 +611,13 @@ const methods = {
             }
 
             // 5. 复制 data 文件夹中的全部内容回容器内部
-            if (stat('/tmp/ipsec_restore/data')) {
-                exec_capture('docker cp /tmp/ipsec_restore/data/. ' + shell_quote(cn) + ':/etc/ipsec.d/');
+            if (stat(restore_base + '/data')) {
+                exec_capture('docker cp ' + shell_quote(restore_base + '/data/.') + ' ' + shell_quote(cn) + ':/etc/ipsec.d/');
             }
-            
+
             // 6. 复制 chap-secrets 文件回容器内部
-            if (stat('/tmp/ipsec_restore/chap-secrets')) {
-                exec_capture('docker cp /tmp/ipsec_restore/chap-secrets ' + shell_quote(cn) + ':/etc/ppp/chap-secrets');
+            if (stat(restore_base + '/chap-secrets')) {
+                exec_capture('docker cp ' + shell_quote(restore_base + '/chap-secrets') + ' ' + shell_quote(cn) + ':/etc/ppp/chap-secrets');
             }
 
             // 7. 重启容器

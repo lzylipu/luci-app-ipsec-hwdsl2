@@ -11,13 +11,13 @@ const callDelete = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'client_de
 const callDownload = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'client_download', params: ['name', 'format'] });
 
 return view.extend({
-    title: _('IKEv2 Client Certificates'),
+    title: _('IKEv2 客户端证书'),
 
     load: function() { return callList(); },
 
     downloadCert: async function(name, fmt) {
         try {
-            ui.showModal(null, E('p', { 'class': 'spinning' }, _('Fetching client profile file...')));
+            ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在获取客户端配置文件...')));
             const r = await callDownload(name, fmt);
             ui.hideModal();
             if (r.error) { ui.addNotification(null, E('p', r.error)); return; }
@@ -41,33 +41,33 @@ return view.extend({
 
     revokeClient: async function(name) {
         if (!confirm(_('Revoke IKEv2 client "') + name + _('"? This blocks client reconnect immediately.'))) return;
-        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Revoking certificate on container...')));
+        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在容器内吊销证书...')));
         const r = await callRevoke(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('Client ') + name + _(' revoked')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' revoked')), 'success'); this.refresh(); }
     },
 
     deleteClient: async function(name) {
         if (!confirm(_('Permanently delete client "') + name + _('"? This cannot be undone.'))) return;
-        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Deleting certificate metadata...')));
+        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在删除证书元数据...')));
         const r = await callDelete(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('Client ') + name + _(' deleted')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' deleted')), 'success'); this.refresh(); }
     },
 
     addClient: async function() {
-        const name = prompt(_('New IKEv2 client name (alphanumeric, dash, underscore only):'));
+        const name = prompt(_('新 IKEv2 客户端名称（仅限字母数字、连字符、下划线）:'));
         if (!name) return;
         if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-            ui.addNotification(null, E('p', _('Invalid client name'))); return;
+            ui.addNotification(null, E('p', _('无效的客户端名称'))); return;
         }
-        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Generating new certificate on container (takes a few seconds)...')));
+        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在容器内生成新证书（需要几秒钟）...')));
         const r = await callAdd(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error + (r.raw || '')));
-        else { ui.addNotification(null, E('p', _('Client ') + name + _(' added')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('客户端 ') + name + _(' added')), 'success'); this.refresh(); }
     },
 
     renderTable: function(clients) {
@@ -95,12 +95,12 @@ return view.extend({
                     'class': 'cbi-button cbi-button-negative',
                     'style': 'margin-right: 4px;',
                     'click': ev => this.revokeClient(c.name)
-                }, _('Revoke')));
+                }, _('吊销')));
             }
             actions.push(E('button', {
                 'class': 'cbi-button cbi-button-remove',
                 'click': ev => this.deleteClient(c.name)
-            }, _('Delete')));
+            }, _('删除')));
 
             return E('tr', { 'class': 'tr' }, [
                 E('td', { 'class': 'td', 'style': 'font-weight:600;' }, c.name),
@@ -111,9 +111,9 @@ return view.extend({
 
         return E('table', { 'class': 'table' }, [
             E('tr', { 'class': 'tr table-titles' }, [
-                E('th', { 'class': 'th' }, _('Client Name')),
-                E('th', { 'class': 'th' }, _('Certificate Status')),
-                E('th', { 'class': 'th', 'style': 'text-align: right;' }, _('Actions'))
+                E('th', { 'class': 'th' }, _('客户端名称')),
+                E('th', { 'class': 'th' }, _('证书状态')),
+                E('th', { 'class': 'th', 'style': 'text-align: right;' }, _('操作'))
             ]),
             ...rows
         ]);
@@ -122,18 +122,18 @@ return view.extend({
     render: function(data) {
         const clients = (data && data.clients) || [];
         return E('div', { 'class': 'cbi-map' }, [
-            E('h2', {}, _('IKEv2 Client Certificates')),
+            E('h2', {}, _('IKEv2 客户端证书')),
             E('p', { 'class': 'cbi-map-descr' },
-                _('Manage certificate clients for IKEv2 mode. Download the pre-built configuration profiles below to load into devices.')),
+                _('管理 IKEv2 模式的证书客户端。下载下方预构建的配置文件导入设备。')),
             E('div', { 'class': 'cbi-section' }, [
-                E('legend', {}, _('Certificates list (') + (data && data.total || 0) + _(')')),
+                E('legend', {}, _('证书列表 (') + (data && data.total || 0) + _(')')),
                 this.renderTable(clients)
             ]),
             E('div', { 'class': 'cbi-page-actions' }, [
                 E('button', {
                     'class': 'cbi-button cbi-button-positive',
                     'click': ev => this.addClient()
-                }, _('Add IKEv2 client'))
+                }, _('添加 IKEv2 客户端'))
             ])
         ]);
     }

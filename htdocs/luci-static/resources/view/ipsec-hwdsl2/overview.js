@@ -12,7 +12,7 @@ const callStart = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'container_
 const callStop = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'container_stop' });
 
 return view.extend({
-    title: _('IPsec VPN Server (hwdsl2) — Overview'),
+    title: _('IPsec VPN 服务器 (hwdsl2) — 概况'),
 
     load: function() {
         return callStatus();
@@ -23,7 +23,7 @@ return view.extend({
         const parent = btn.parentNode;
         btn.style.display = 'none';
         
-        const statusSpan = E('span', { 'class': 'spinner' }, _('Checking...'));
+        const statusSpan = E('span', { 'class': 'spinner' }, _('检测中...'));
         parent.appendChild(statusSpan);
 
         // Fetch using browser to verify real client-side outbound connectivity
@@ -36,7 +36,7 @@ return view.extend({
             })
             .catch(() => {
                 statusSpan.className = 'red';
-                statusSpan.textContent = _('Problem detected!');
+                statusSpan.textContent = _('检测到问题！');
             });
     },
 
@@ -111,39 +111,39 @@ return view.extend({
             E('div', { 'class': 'pw2-col' }, E('div', { 'class': 'pw2-card' }, [
                 E('div', { 'class': 'pw2-icon-circle ' + (status.running ? 'bg-green' : 'bg-red') }, 'C'),
                 E('div', { 'class': 'pw2-info' }, [
-                    E('h4', {}, _('Container')),
+                    E('h4', {}, _('容器')),
                     E('span', { 'class': 'pw2-status-val ' + (status.running ? 'green' : 'red') },
-                        status.running ? _('RUNNING') : _('NOT RUNNING'))
+                        status.running ? _('运行中') : _('未运行'))
                 ])
             ])),
             // IKEv2 Server Card
             E('div', { 'class': 'pw2-col' }, E('div', { 'class': 'pw2-card' }, [
                 E('div', { 'class': 'pw2-icon-circle ' + (status.running ? 'bg-green' : 'bg-red') }, '2'),
                 E('div', { 'class': 'pw2-info' }, [
-                    E('h4', {}, _('IKEv2 Server')),
+                    E('h4', {}, _('IKEv2 服务')),
                     E('span', { 'class': 'pw2-status-val ' + (status.running ? 'green' : 'red') },
-                        status.running ? _('RUNNING') : _('NOT RUNNING'))
+                        status.running ? _('运行中') : _('未运行'))
                 ])
             ])),
             // L2TP/IPsec Card
             E('div', { 'class': 'pw2-col' }, E('div', { 'class': 'pw2-card' }, [
                 E('div', { 'class': 'pw2-icon-circle ' + (status.running ? 'bg-green' : 'bg-red') }, 'L'),
                 E('div', { 'class': 'pw2-info' }, [
-                    E('h4', {}, _('L2TP Daemon')),
+                    E('h4', {}, _('L2TP 守护进程')),
                     E('span', { 'class': 'pw2-status-val ' + (status.running ? 'green' : 'red') },
-                        status.running ? _('RUNNING') : _('NOT RUNNING'))
+                        status.running ? _('运行中') : _('未运行'))
                 ])
             ])),
             // Baidu Connection Check Card
             E('div', { 'class': 'pw2-col' }, E('div', { 'class': 'pw2-card' }, [
                 E('div', { 'class': 'pw2-icon-circle bg-blue' }, 'B'),
                 E('div', { 'class': 'pw2-info' }, [
-                    E('h4', {}, _('Baidu Conn.')),
+                    E('h4', {}, _('百度连通性')),
                     E('span', { 'class': 'pw2-status-val' }, [
                         E('a', {
                             'class': 'check-link',
                             'click': ev => this.checkConnect(ev, 'baidu', 'www.baidu.com')
-                        }, _('Touch Check'))
+                        }, _('连通性检测'))
                     ])
                 ])
             ])),
@@ -151,12 +151,12 @@ return view.extend({
             E('div', { 'class': 'pw2-col' }, E('div', { 'class': 'pw2-card' }, [
                 E('div', { 'class': 'pw2-icon-circle bg-blue' }, 'G'),
                 E('div', { 'class': 'pw2-info' }, [
-                    E('h4', {}, _('GitHub Conn.')),
+                    E('h4', {}, _('GitHub 连通性')),
                     E('span', { 'class': 'pw2-status-val' }, [
                         E('a', {
                             'class': 'check-link',
                             'click': ev => this.checkConnect(ev, 'github', 'github.com')
-                        }, _('Touch Check'))
+                        }, _('连通性检测'))
                     ])
                 ])
             ]))
@@ -165,38 +165,38 @@ return view.extend({
         // Container info details
         let details_box = null;
         if (status.running) {
-            let active_sa_descr = _('No clients currently connected.');
+            let active_sa_descr = _('当前无客户端连接。');
             if (status.active_sa && status.active_sa > 0) {
-                active_sa_descr = _('Active tunnels count: ') + status.active_sa;
+                active_sa_descr = _('活跃隧道数量: ') + status.active_sa;
             }
 
             details_box = E('div', { 'class': 'cbi-section' }, [
-                E('h3', {}, _('Active Tunnels (Live SA)')),
+                E('h3', {}, _('活跃隧道 (Live SA)')),
                 E('p', { 'class': 'cbi-map-descr' }, active_sa_descr),
                 status.active_sa_detail && status.active_sa_detail.length ?
                     E('pre', { 'class': 'cbi-code', 'style': 'font-size:11px; white-space:pre-wrap;' },
                         status.active_sa_detail.join('\n')) : null,
 
-                E('h3', {}, _('Libreswan Daemon Status')),
+                E('h3', {}, _('Libreswan 守护进程状态')),
                 E('pre', {
                     'class': 'cbi-code',
                     'style': 'max-height:220px; overflow:auto; font-size:11px; white-space:pre-wrap;'
-                }, status.daemon || _('Daemon logs empty'))
+                }, status.daemon || _('守护进程日志为空'))
             ]);
         } else {
             details_box = E('div', { 'class': 'alert warning' }, [
-                E('strong', {}, _('Container inactive.')),
-                E('p', {}, _('Go to Settings and enable the VPN switch to provision and run the container.'))
+                E('strong', {}, _('容器未运行。')),
+                E('p', {}, _('前往「设置」开启 VPN 开关以创建并运行容器。'))
             ]);
         }
 
         return E('div', { 'class': 'cbi-map' }, [
             css,
-            E('h2', {}, _('IPsec VPN Server (hwdsl2)')),
+            E('h2', {}, _('IPsec VPN 服务器 (hwdsl2)')),
             E('p', { 'class': 'cbi-map-descr' },
-                _('Visual client and user credential manager for Libreswan IKEv2, L2TP, and Cisco IPsec XAuth.')),
+                _('Libreswan IKEv2、L2TP 和 Cisco IPsec XAuth 的可视化管理面板。')),
             E('div', { 'class': 'cbi-section' }, [
-                E('legend', {}, _('Running Status')),
+                E('legend', {}, _('运行状态')),
                 cards
             ]),
             details_box

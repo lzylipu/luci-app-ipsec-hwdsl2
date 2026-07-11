@@ -11,20 +11,20 @@ const callRestart = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'containe
 const callImageCheck = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'image_check' });
 
 return view.extend({
-    title: _('IPsec VPN (hwdsl2) Settings'),
+    title: _('IPsec VPN (hwdsl2) 设置'),
 
     render: function() {
         let m, s, o;
 
-        m = new form.Map('ipsec-hwdsl2', _('IPsec VPN (hwdsl2) — Settings'),
-            _('Configure the smart Docker container. Enabling the service auto-provisions and configures a restart-persistent IPsec server.'));
+        m = new form.Map('ipsec-hwdsl2', _('IPsec VPN (hwdsl2) — 设置'),
+            _('配置智能 Docker 容器。启用服务将自动配置并运行重启后持久化的 IPsec 服务器。'));
 
-        s = m.section(form.TypedSection, 'global', _('Global Options'));
+        s = m.section(form.TypedSection, 'global', _('全局选项'));
         s.anonymous = true;
 
         // Master Switch: Driving container start/stop lifecycle
-        o = s.option(form.Flag, 'enabled', _('Enable VPN service'),
-            _('When enabled, the daemon will provision or start the container. When disabled, the container is stopped.'));
+        o = s.option(form.Flag, 'enabled', _('启用 VPN 服务'),
+            _('启用时守护进程将创建或启动容器。禁用时容器将被停止。'));
         o.default = '0';
         o.rmempty = false;
 
@@ -39,55 +39,55 @@ return view.extend({
             }
         };
 
-        o = s.option(form.Value, 'container_name', _('Container name'),
-            _('Name of the Docker container. Default: ipsec-vpn-server'));
+        o = s.option(form.Value, 'container_name', _('容器名称'),
+            _('Docker 容器名称。默认: ipsec-vpn-server'));
         o.default = 'ipsec-vpn-server';
         o.rmempty = false;
 
-        o = s.option(form.Value, 'image', _('Image'),
-            _('Upstream setup image. Default: hwdsl2/ipsec-vpn-server:latest'));
+        o = s.option(form.Value, 'image', _('镜像'),
+            _('上游安装镜像。默认: hwdsl2/ipsec-vpn-server:latest'));
         o.default = 'hwdsl2/ipsec-vpn-server:latest';
         o.rmempty = false;
 
-        o = s.option(form.Value, 'volume', _('Volume mount path'),
-            _('Mounted volume for certificate persistence. Format: volume_name:/etc/ipsec.d'));
+        o = s.option(form.Value, 'volume', _('挂载卷路径'),
+            _('证书持久化挂载卷。格式: volume_name:/etc/ipsec.d'));
         o.default = 'ikev2-vpn-data:/etc/ipsec.d';
         o.rmempty = false;
 
-        s = m.section(form.TypedSection, 'global', _('Container Template Parameters'));
+        s = m.section(form.TypedSection, 'global', _('容器模板参数'));
         s.anonymous = true;
         s.depends('enabled', '1');
 
-        o = s.option(form.Value, 'vpn_ipsec_psk', _('IPsec Pre-Shared Key (PSK)'),
-            _('Used for L2TP/IPsec and XAuth. Left blank to auto-generate a strong secure key.'));
+        o = s.option(form.Value, 'vpn_ipsec_psk', _('IPsec 预共享密钥 (PSK)'),
+            _('用于 L2TP/IPsec 和 XAuth。留空则自动生成高强度安全密钥。'));
         o.password = true;
         o.rmempty = true;
 
-        o = s.option(form.Value, 'vpn_user', _('Default Administrator Username'),
-            _('Initial VPN administrator. Default: vpnuser'));
+        o = s.option(form.Value, 'vpn_user', _('默认管理员用户名'),
+            _('初始 VPN 管理员。默认: vpnuser'));
         o.default = 'vpnuser';
         o.rmempty = true;
 
-        o = s.option(form.Value, 'vpn_password', _('Default Administrator Password'),
-            _('Password for default admin. Left blank to auto-generate.'));
+        o = s.option(form.Value, 'vpn_password', _('默认管理员密码'),
+            _('默认管理员密码。留空则自动生成。'));
         o.password = true;
         o.rmempty = true;
 
-        o = s.option(form.Value, 'dns_srv1', _('DNS Server 1'), _('Primary DNS server. Default: 1.1.1.1'));
+        o = s.option(form.Value, 'dns_srv1', _('DNS 服务器 1'), _('主 DNS 服务器。默认: 1.1.1.1'));
         o.default = '1.1.1.1';
         o.datatype = 'ip4addr';
 
-        o = s.option(form.Value, 'dns_srv2', _('DNS Server 2'), _('Secondary DNS server. Default: 1.0.0.1'));
+        o = s.option(form.Value, 'dns_srv2', _('DNS 服务器 2'), _('备 DNS 服务器。默认: 1.0.0.1'));
         o.default = '1.0.0.1';
         o.datatype = 'ip4addr';
 
-        o = s.option(form.Value, 'public_ip', _('Public Server IP/Domain (Optional)'),
-            _('If set, this will override auto-detected public IP in client config.'));
+        o = s.option(form.Value, 'public_ip', _('公网服务器 IP/域名（可选）'),
+            _('如果设置，将覆盖客户端配置中自动检测的公网 IP。'));
         o.datatype = 'host';
         o.rmempty = true;
 
         // Container actions
-        s = m.section(form.TypedSection, 'global', _('Actions'));
+        s = m.section(form.TypedSection, 'global', _('操作'));
         s.anonymous = true;
         s.render_actions = function() {
             return E('div', { 'class': 'cbi-section-actions' }, [
@@ -96,29 +96,29 @@ return view.extend({
                     'style': 'margin-right: 8px;',
                     'click': async ev => {
                         ev.target.disabled = true;
-                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Restarting Docker container...')));
+                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在重启 Docker 容器...')));
                         try {
                             const r = await callRestart();
                             ui.hideModal();
                             if (r.error) ui.addNotification(null, E('p', r.error));
-                            else ui.addNotification(null, E('p', _('Container restarted successfully')), 'success');
+                            else ui.addNotification(null, E('p', _('容器重启成功')), 'success');
                         } finally { ev.target.disabled = false; }
                     }
-                }, _('Restart container')),
+                }, _('重启容器')),
                 
                 E('button', {
                     'class': 'cbi-button cbi-button-negative',
                     'click': async ev => {
-                        if (!confirm(_('Force stop the container? VPN tunnels will disconnect immediately.'))) return;
+                        if (!confirm(_('强制停止容器？VPN 隧道将立即断开。'))) return;
                         ev.target.disabled = true;
-                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Stopping container...')));
+                        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在停止容器...')));
                         try {
                             await callStop();
                             ui.hideModal();
-                            ui.addNotification(null, E('p', _('Container stopped')), 'success');
+                            ui.addNotification(null, E('p', _('容器已停止')), 'success');
                         } finally { ev.target.disabled = false; }
                     }
-                }, _('Force Stop container'))
+                }, _('强制停止容器'))
             ]);
         };
 

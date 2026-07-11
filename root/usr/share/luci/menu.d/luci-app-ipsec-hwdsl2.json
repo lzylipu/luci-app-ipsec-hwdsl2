@@ -1,63 +1,69 @@
 {
-	"admin/services/ipsec-hwdsl2": {
-		"title": "IPsec VPN (hwdsl2)",
-		"order": "70",
-		"action": {
-			"type": "firstchild"
-		},
-		"depends": {
-			"acl": [ "luci-app-ipsec-hwdsl2" ],
-			"fs": {
-				"/usr/bin/docker": "executable"
-			}
-		}
-	},
-
-	"admin/services/ipsec-hwdsl2/overview": {
-		"title": "Overview",
-		"order": 1,
-		"action": {
-			"type": "view",
-			"path": "ipsec-hwdsl2/overview"
-		},
-		"depends": {
-			"acl": [ "luci-app-ipsec-hwdsl2" ]
-		}
-	},
-
-	"admin/services/ipsec-hwdsl2/clients": {
-		"title": "IKEv2 Clients",
-		"order": 2,
-		"action": {
-			"type": "view",
-			"path": "ipsec-hwdsl2/clients"
-		},
-		"depends": {
-			"acl": [ "luci-app-ipsec-hwdsl2" ]
-		}
-	},
-
-	"admin/services/ipsec-hwdsl2/users": {
-		"title": "L2TP / XAuth Users",
-		"order": 3,
-		"action": {
-			"type": "view",
-			"path": "ipsec-hwdsl2/users"
-		},
-		"depends": {
-			"acl": [ "luci-app-ipsec-hwdsl2" ]
-		}
-	},
-
-	"admin/services/ipsec-hwdsl2/settings": {
-		"title": "Settings",
-		"order": 4,
-		"action": {
-			"type": "view",
-			"path": "ipsec-hwdsl2/settings"
-		},
-		"depends": {
-			"acl": [ "luci-app-ipsec-hwdsl2" ]
-		}
-	}
+    "admin/services/ipsec-hwdsl2": {
+        "title": "IPsec VPN (hwdsl2)",
+        "order": "70",
+        "action": {
+            "type": "firstchild"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-ipsec-hwdsl2"
+            ],
+            "fs": {
+                "/usr/bin/docker": "executable"
+            }
+        }
+    },
+    "admin/services/ipsec-hwdsl2/overview": {
+        "title": "概况",
+        "order": 1,
+        "action": {
+            "type": "view",
+            "path": "ipsec-hwdsl2/overview"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-ipsec-hwdsl2"
+            ]
+        }
+    },
+    "admin/services/ipsec-hwdsl2/clients": {
+        "title": "IKEv2 客户端",
+        "order": 2,
+        "action": {
+            "type": "view",
+            "path": "ipsec-hwdsl2/clients"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-ipsec-hwdsl2"
+            ]
+        }
+    },
+    "admin/services/ipsec-hwdsl2/users": {
+        "title": "L2TP / XAuth 用户",
+        "order": 3,
+        "action": {
+            "type": "view",
+            "path": "ipsec-hwdsl2/users"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-ipsec-hwdsl2"
+            ]
+        }
+    },
+    "admin/services/ipsec-hwdsl2/settings": {
+        "title": "设置",
+        "order": 4,
+        "action": {
+            "type": "view",
+            "path": "ipsec-hwdsl2/settings"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-ipsec-hwdsl2"
+            ]
+        }
+    }
 }

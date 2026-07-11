@@ -8,36 +8,36 @@ const callAdd   = rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'user_add',
 const callDelete= rpc.declare({ object: 'luci.ipsec_hwdsl2', method: 'user_delete', params: ['name'] });
 
 return view.extend({
-    title: _('L2TP / XAuth Users'),
+    title: _('L2TP / XAuth 用户'),
 
     load: function() { return callList(); },
 
     removeUser: async function(name) {
         if (!confirm(_('Delete VPN user "') + name + _('"? This removes credentials from both chap-secrets and passwd.'))) return;
-        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Updating user database...')));
+        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在更新用户数据库...')));
         const r = await callDelete(name);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error));
-        else { ui.addNotification(null, E('p', _('User ') + name + _(' deleted')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('用户 ') + name + _(' deleted')), 'success'); this.refresh(); }
     },
 
     addUser: async function() {
-        const name = prompt(_('New VPN username (alphanumeric, dash, underscore only):'));
+        const name = prompt(_('新 VPN 用户名（仅限字母数字、连字符、下划线）:'));
         if (!name) return;
         if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-            ui.addNotification(null, E('p', _('Invalid username'))); return;
+            ui.addNotification(null, E('p', _('无效的用户名'))); return;
         }
-        const pass = prompt(_('Enter VPN password:'));
+        const pass = prompt(_('输入 VPN 密码:'));
         if (!pass) return;
         if (/["`$\\]/.test(pass)) {
             ui.addNotification(null, E('p', _('Password contains forbidden characters (", `, $, \\)'))); return;
         }
 
-        ui.showModal(null, E('p', { 'class': 'spinning' }, _('Creating user accounts...')));
+        ui.showModal(null, E('p', { 'class': 'spinning' }, _('正在创建用户账户...')));
         const r = await callAdd(name, pass);
         ui.hideModal();
         if (r.error) ui.addNotification(null, E('p', r.error));
-        else { ui.addNotification(null, E('p', _('User ') + name + _(' added')), 'success'); this.refresh(); }
+        else { ui.addNotification(null, E('p', _('用户 ') + name + _(' added')), 'success'); this.refresh(); }
     },
 
     renderTable: function(users) {
@@ -52,16 +52,16 @@ return view.extend({
                     E('button', {
                         'class': 'cbi-button cbi-button-remove',
                         'click': ev => this.removeUser(u.name)
-                    }, _('Delete'))
+                    }, _('删除'))
                 ])
             ]);
         });
 
         return E('table', { 'class': 'table' }, [
             E('tr', { 'class': 'tr table-titles' }, [
-                E('th', { 'class': 'th' }, _('Username')),
-                E('th', { 'class': 'th' }, _('VPN Types')),
-                E('th', { 'class': 'th', 'style': 'text-align: right;' }, _('Action'))
+                E('th', { 'class': 'th' }, _('用户名')),
+                E('th', { 'class': 'th' }, _('VPN 类型')),
+                E('th', { 'class': 'th', 'style': 'text-align: right;' }, _('操作'))
             ]),
             ...rows
         ]);
@@ -70,18 +70,18 @@ return view.extend({
     render: function(data) {
         const users = (data && data.users) || [];
         return E('div', { 'class': 'cbi-map' }, [
-            E('h2', {}, _('L2TP / Cisco IPsec XAuth Users')),
+            E('h2', {}, _('L2TP / Cisco IPsec XAuth 用户')),
             E('p', { 'class': 'cbi-map-descr' },
-                _('PSK-based VPN accounts are double-written to both chap-secrets (L2TP/IPsec) and passwd (Cisco IPsec / XAuth) inside the container.')),
+                _('基于 PSK 的 VPN 账户会同时写入容器内的 chap-secrets (L2TP/IPsec) 和 passwd (Cisco IPsec / XAuth)。')),
             E('div', { 'class': 'cbi-section' }, [
-                E('legend', {}, _('Users list (') + (data && data.total || 0) + _(')')),
+                E('legend', {}, _('用户列表 (') + (data && data.total || 0) + _(')')),
                 this.renderTable(users)
             ]),
             E('div', { 'class': 'cbi-page-actions' }, [
                 E('button', {
                     'class': 'cbi-button cbi-button-positive',
                     'click': ev => this.addUser()
-                }, _('Add VPN user'))
+                }, _('添加 VPN 用户'))
             ])
         ]);
     }

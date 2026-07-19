@@ -632,10 +632,5 @@ const methods = {
     }
 };
 
-if (caller != 'rpcd') {
-    let res = methods.user_add.call({ args: { name: "test_lzy", password: "lzy_password_123" } });
-    print(sprintf("%J\n", res));
-    exit(0);
-}
 
 return { 'luci.ipsec_hwdsl2': methods };

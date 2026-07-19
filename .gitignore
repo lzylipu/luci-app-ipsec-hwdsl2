@@ -1,0 +1,14 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IPK build artifacts
+.ipk
+*.ipk
+bin/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.swp

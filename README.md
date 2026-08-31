@@ -1,6 +1,16 @@
+<div align="center">
+
 # 🛡️ luci-app-ipsec-hwdsl2
 
+**OpenWrt/ImmortalWrt 上的 IPsec VPN 可视化管理面板**
+
+[![Platform](https://img.shields.io/badge/Platform-OpenWrt%20%7C%20ImmortalWrt-blue?style=flat-square&logo=openwrt)](https://openwrt.org/)
+[![Backend](https://img.shields.io/badge/Backend-hwdsl2%2Fipsec--vpn--server-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/hwdsl2/docker-ipsec-vpn-server)
+[![License](https://img.shields.io/github/license/lzylipu/luci-app-ipsec-hwdsl2?style=flat-square)](./LICENSE)
+
 **🌐 English | [简体中文](#-简体中文)**
+
+</div>
 
 > 🛡️ 一套运行在路由器上的 IPsec VPN 可视化控制面：容器自动拉停、密钥自动生成、证书与用户全图形化管理，二进制配置文件无损下载。
 

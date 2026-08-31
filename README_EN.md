@@ -1,16 +1,8 @@
-<div align="center">
-
 # 🛡️ luci-app-ipsec-hwdsl2
 
 **LuCI Web UI for the hwdsl2/IPsec VPN Docker Container**
 
-[![License](https://img.shields.io/github/license/lzylipu/luci-app-ipsec-hwdsl2?style=flat-square)](./LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-OpenWrt%20%7C%20ImmortalWrt-blue?style=flat-square&logo=openwrt)](https://openwrt.org/)
-[![Docker](https://img.shields.io/badge/Backend-hwdsl2%2Fipsec--vpn--server-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/hwdsl2/docker-ipsec-vpn-server)
-
 **English | [简体中文](./README.md)**
-
-</div>
 
 ---
 

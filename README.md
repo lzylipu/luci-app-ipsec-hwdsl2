@@ -2,6 +2,8 @@
 
 **🌐 English | [简体中文](#-简体中文)**
 
+> 🛡️ 一套运行在路由器上的 IPsec VPN 可视化控制面：容器自动拉停、密钥自动生成、证书与用户全图形化管理，二进制配置文件无损下载。
+
 ---
 
 ## 🌐 English
@@ -38,3 +40,9 @@ This project is built to manage the upstream image maintained by Lin Song ([@hwd
 
 ### 🚀 安装与集成
 本插件可通过 ImmortalWrt/OpenWrt 标准 `luci.mk` 进线编译。在 ImageBuilder 工作流中，将源集成到 `feeds.conf.custom` 即可一键打包。
+
+---
+
+## 📄 许可证 / License
+
+[MIT](./LICENSE) License

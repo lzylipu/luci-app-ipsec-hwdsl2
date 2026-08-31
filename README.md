@@ -2,7 +2,7 @@
 
 **OpenWrt/ImmortalWrt 上的 IPsec VPN 可视化管理面板**
 
-**🌐 English | [简体中文](#-简体中文)**
+**[English](./README_EN.md) | 简体中文**
 
 > 🛡️ 一套运行在路由器上的 IPsec VPN 可视化控制面：容器自动拉停、密钥自动生成、证书与用户全图形化管理，二进制配置文件无损下载。
 
